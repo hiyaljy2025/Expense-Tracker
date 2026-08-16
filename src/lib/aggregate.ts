@@ -108,3 +108,8 @@ export function getCategoryBreakdown(transactions: Transaction[]): CategoryAmoun
     .map(([category, amount]) => ({ category, amount, pct: total > 0 ? (amount / total) * 100 : 0 }))
     .sort((a, b) => b.amount - a.amount);
 }
+
+/** The `limit` largest transactions by amount, descending. */
+export function getTopTransactions(transactions: Transaction[], limit = 10): Transaction[] {
+  return transactions.slice().sort((a, b) => b.amount - a.amount).slice(0, limit);
+}

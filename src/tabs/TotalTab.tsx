@@ -1,14 +1,23 @@
 import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, FileSpreadsheet, Settings } from 'lucide-react';
 import { useTransactions } from '../store/TransactionsContext';
-import { getAccountBalances, getCategoryBreakdown, getMonthSummary, inRange, sumByType } from '../lib/aggregate';
+import {
+  getAccountBalances,
+  getCategoryBreakdown,
+  getMonthSummary,
+  getTopTransactions,
+  inRange,
+  sumByType,
+} from '../lib/aggregate';
 import { formatMonthYear, getMonthRange } from '../lib/dateUtils';
 import { SummaryRow } from '../components/common/SummaryRow';
 import { exportToExcel } from '../lib/excelExport';
 import { CategoryBreakdownChart } from '../components/charts/CategoryBreakdownChart';
 import { ManageDataModal } from '../components/settings/ManageDataModal';
+import { TopTransactionsCard } from '../components/transactions/TopTransactionsCard';
+import type { Transaction } from '../types';
 
-export function TotalTab() {
+export function TotalTab({ onEditTransaction }: { onEditTransaction: (t: Transaction) => void }) {
   const { transactions, accounts, accountOpeningBalances, budget, setBudget } = useTransactions();
   const [cursor, setCursor] = useState(() => new Date());
   const [manageOpen, setManageOpen] = useState(false);
@@ -17,12 +26,17 @@ export function TotalTab() {
 
   const monthSummary = useMemo(() => getMonthSummary(transactions, year, month), [transactions, year, month]);
 
-  const monthExpenseTx = useMemo(() => {
+  const monthTx = useMemo(() => {
     const { start, end } = getMonthRange(year, month);
-    return inRange(transactions, start, end).filter((t) => t.type === 'expense');
+    return inRange(transactions, start, end);
   }, [transactions, year, month]);
 
+  const monthExpenseTx = useMemo(() => monthTx.filter((t) => t.type === 'expense'), [monthTx]);
+  const monthIncomeTx = useMemo(() => monthTx.filter((t) => t.type === 'income'), [monthTx]);
+
   const categoryBreakdown = useMemo(() => getCategoryBreakdown(monthExpenseTx), [monthExpenseTx]);
+  const topExpenses = useMemo(() => getTopTransactions(monthExpenseTx, 10), [monthExpenseTx]);
+  const topIncome = useMemo(() => getTopTransactions(monthIncomeTx, 10), [monthIncomeTx]);
 
   const compareLastMonth = useMemo(() => {
     const prevMonth = month === 0 ? 11 : month - 1;
@@ -95,6 +109,9 @@ export function TotalTab() {
         <h3 className="mb-2 text-sm font-semibold text-gray-700">Spending by Category</h3>
         <CategoryBreakdownChart data={categoryBreakdown} />
       </div>
+
+      <TopTransactionsCard title="Top 10 Expenses" transactions={topExpenses} onSelect={onEditTransaction} />
+      <TopTransactionsCard title="Top 10 Income" transactions={topIncome} onSelect={onEditTransaction} />
 
       <div className="mt-2 bg-white px-4 py-3">
         <h3 className="mb-2 text-sm font-semibold text-gray-700">Accounts</h3>

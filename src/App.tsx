@@ -36,7 +36,7 @@ function AppShell() {
       )}
       {tab === 'calendar' && <CalendarTab onSelectDay={goToDay} />}
       {tab === 'weekly' && <WeeklyMonthlyTab />}
-      {tab === 'total' && <TotalTab />}
+      {tab === 'total' && <TotalTab onEditTransaction={(t) => setEditing(t)} />}
 
       {editing !== null && <TransactionForm editing={editing} onClose={() => setEditing(null)} />}
     </div>
