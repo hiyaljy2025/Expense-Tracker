@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme {
+  --color-expense: #ef4444;
+  --color-expense-light: #fee2e2;
+  --color-income: #0d9488;
+  --color-income-light: #ccfbf1;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #f8f9fb;
+  color: #1f2430;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
