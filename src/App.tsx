@@ -2,15 +2,18 @@ import { useState } from 'react';
 import { TransactionsProvider } from './store/TransactionsContext';
 import { TabBar, type TabKey } from './components/layout/TabBar';
 import { TransactionForm } from './components/form/TransactionForm';
+import { ReminderForm } from './components/reminders/ReminderForm';
 import { DailyTab } from './tabs/DailyTab';
 import { CalendarTab } from './tabs/CalendarTab';
 import { WeeklyMonthlyTab } from './tabs/WeeklyMonthlyTab';
 import { TotalTab } from './tabs/TotalTab';
-import type { Transaction } from './types';
+import { RemindersTab } from './tabs/RemindersTab';
+import type { BillReminder, Transaction } from './types';
 
 function AppShell() {
   const [tab, setTab] = useState<TabKey>('daily');
   const [editing, setEditing] = useState<Transaction | 'new' | null>(null);
+  const [editingReminder, setEditingReminder] = useState<BillReminder | 'new' | null>(null);
   const [dailyFocusDay, setDailyFocusDay] = useState<string | null>(null);
 
   function goToDay(dayKey: string) {
@@ -37,8 +40,14 @@ function AppShell() {
       {tab === 'calendar' && <CalendarTab onSelectDay={goToDay} />}
       {tab === 'weekly' && <WeeklyMonthlyTab />}
       {tab === 'total' && <TotalTab onEditTransaction={(t) => setEditing(t)} />}
+      {tab === 'reminders' && (
+        <RemindersTab onAdd={() => setEditingReminder('new')} onEdit={(r) => setEditingReminder(r)} />
+      )}
 
       {editing !== null && <TransactionForm editing={editing} onClose={() => setEditing(null)} />}
+      {editingReminder !== null && (
+        <ReminderForm editing={editingReminder} onClose={() => setEditingReminder(null)} />
+      )}
     </div>
   );
 }

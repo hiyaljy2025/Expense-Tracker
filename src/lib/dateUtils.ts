@@ -119,3 +119,25 @@ export function isToday(date: Date): boolean {
   const now = new Date();
   return dayKey(date) === dayKey(now);
 }
+
+export function addYears(date: Date, count: number): Date {
+  return addMonths(date, count * 12);
+}
+
+/** Whole calendar days from today to `date` (negative if `date` is in the past). */
+export function daysUntil(date: Date): number {
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return Math.round((startOfDay(date).getTime() - startOfDay(new Date()).getTime()) / msPerDay);
+}
+
+/** Format a Date for an <input type="date"> value, in local time. */
+export function toDateInputValue(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+export function formatFullDate(date: Date): string {
+  return `${MONTH_SHORT[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+}

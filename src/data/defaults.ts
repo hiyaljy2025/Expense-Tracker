@@ -24,5 +24,6 @@ export function createDefaultState(): AppState {
     accounts: DEFAULT_ACCOUNTS,
     accountOpeningBalances: {},
     budget: {},
+    reminders: [],
   };
 }

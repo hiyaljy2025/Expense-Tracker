@@ -1,7 +1,9 @@
 import { createContext, useContext, useEffect, useReducer, type ReactNode } from 'react';
-import type { AppState, Transaction } from '../types';
+import type { AppState, BillReminder, Transaction } from '../types';
 import { loadState, saveState } from '../lib/storage';
 import { createId } from '../lib/id';
+import { dayKey } from '../lib/dateUtils';
+import { advanceDueDate } from '../lib/reminders';
 
 type CategoryKind = 'expense' | 'income';
 
@@ -19,6 +21,10 @@ type Action =
   | { kind: 'renameAccount'; oldName: string; newName: string }
   | { kind: 'removeAccount'; name: string }
   | { kind: 'setAccountOpeningBalance'; name: string; balance: number }
+  | { kind: 'addReminder'; reminder: Omit<BillReminder, 'id'> }
+  | { kind: 'updateReminder'; reminder: BillReminder }
+  | { kind: 'removeReminder'; id: string }
+  | { kind: 'markReminderPaid'; id: string; paidDate: string }
   | { kind: 'replace'; state: AppState };
 
 function renameInList(list: string[], oldName: string, newName: string): string[] {
@@ -96,6 +102,41 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         accountOpeningBalances: { ...state.accountOpeningBalances, [action.name]: action.balance },
       };
+    case 'addReminder':
+      return { ...state, reminders: [...state.reminders, { ...action.reminder, id: createId() }] };
+    case 'updateReminder':
+      return {
+        ...state,
+        reminders: state.reminders.map((r) => (r.id === action.reminder.id ? action.reminder : r)),
+      };
+    case 'removeReminder':
+      return { ...state, reminders: state.reminders.filter((r) => r.id !== action.id) };
+    case 'markReminderPaid': {
+      const reminder = state.reminders.find((r) => r.id === action.id);
+      if (!reminder) return state;
+      const paidTransaction: Transaction = {
+        id: createId(),
+        type: 'expense',
+        date: new Date(action.paidDate).toISOString(),
+        amount: reminder.amount,
+        category: reminder.category,
+        account: reminder.account,
+        note: reminder.name,
+      };
+      if (reminder.frequency === 'once') {
+        return {
+          ...state,
+          transactions: [...state.transactions, paidTransaction],
+          reminders: state.reminders.filter((r) => r.id !== action.id),
+        };
+      }
+      const nextDueDate = dayKey(advanceDueDate(new Date(reminder.dueDate), reminder.frequency));
+      return {
+        ...state,
+        transactions: [...state.transactions, paidTransaction],
+        reminders: state.reminders.map((r) => (r.id === action.id ? { ...r, dueDate: nextDueDate } : r)),
+      };
+    }
     case 'replace':
       return action.state;
     default:
@@ -117,6 +158,10 @@ interface TransactionsContextValue extends AppState {
   renameAccount: (oldName: string, newName: string) => void;
   removeAccount: (name: string) => void;
   setAccountOpeningBalance: (name: string, balance: number) => void;
+  addReminder: (reminder: Omit<BillReminder, 'id'>) => void;
+  updateReminder: (reminder: BillReminder) => void;
+  removeReminder: (id: string) => void;
+  markReminderPaid: (id: string, paidDate?: string) => void;
   replaceState: (state: AppState) => void;
 }
 
@@ -145,6 +190,11 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     renameAccount: (oldName, newName) => dispatch({ kind: 'renameAccount', oldName, newName }),
     removeAccount: (name) => dispatch({ kind: 'removeAccount', name }),
     setAccountOpeningBalance: (name, balance) => dispatch({ kind: 'setAccountOpeningBalance', name, balance }),
+    addReminder: (reminder) => dispatch({ kind: 'addReminder', reminder }),
+    updateReminder: (reminder) => dispatch({ kind: 'updateReminder', reminder }),
+    removeReminder: (id) => dispatch({ kind: 'removeReminder', id }),
+    markReminderPaid: (id, paidDate) =>
+      dispatch({ kind: 'markReminderPaid', id, paidDate: paidDate ?? new Date().toISOString() }),
     replaceState: (newState) => dispatch({ kind: 'replace', state: newState }),
   };
 

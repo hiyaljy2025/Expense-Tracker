@@ -27,8 +27,9 @@ export function TopTransactionsCard({
               <span className="w-4 shrink-0 text-xs font-medium text-gray-300">{i + 1}</span>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium text-gray-800">{t.category}</div>
-                <div className="text-xs text-gray-400">
+                <div className="truncate text-xs text-gray-400">
                   {formatDayHeader(new Date(t.date))} · {t.account}
+                  {t.note ? ` · ${t.note}` : ''}
                 </div>
               </div>
               <AmountText type={t.type} amount={t.amount} />
