@@ -98,3 +98,24 @@ export function toDatetimeLocalValue(date: Date): string {
   const min = String(date.getMinutes()).padStart(2, '0');
   return `${y}-${m}-${d}T${h}:${min}`;
 }
+
+export function addWeeks(date: Date, count: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + count * 7);
+  return d;
+}
+
+/** Adds calendar months, clamping the day so e.g. Jan 31 + 1 month lands on Feb 28/29 instead of rolling into March. */
+export function addMonths(date: Date, count: number): Date {
+  const d = new Date(date);
+  const targetMonth = d.getMonth() + count;
+  const daysInTargetMonth = new Date(d.getFullYear(), targetMonth + 1, 0).getDate();
+  d.setDate(Math.min(d.getDate(), daysInTargetMonth));
+  d.setMonth(targetMonth);
+  return d;
+}
+
+export function isToday(date: Date): boolean {
+  const now = new Date();
+  return dayKey(date) === dayKey(now);
+}

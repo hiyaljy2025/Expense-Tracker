@@ -66,11 +66,45 @@ export function getYearSummary(transactions: Transaction[], year: number): { tot
   return { totals: sumByType(yearTx), months };
 }
 
-export function sumByAccount(transactions: Transaction[]): Map<string, number> {
+export function sumExpenseByAccount(transactions: Transaction[]): Map<string, number> {
   const map = new Map<string, number>();
   for (const t of transactions) {
     if (t.type !== 'expense') continue;
     map.set(t.account, (map.get(t.account) ?? 0) + t.amount);
   }
   return map;
+}
+
+/** Running ledger balance per account: opening balance + income - expense, across all transactions. */
+export function getAccountBalances(
+  transactions: Transaction[],
+  accounts: string[],
+  openingBalances: Record<string, number>,
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const a of accounts) map.set(a, openingBalances[a] ?? 0);
+  for (const t of transactions) {
+    const delta = t.type === 'income' ? t.amount : -t.amount;
+    map.set(t.account, (map.get(t.account) ?? openingBalances[t.account] ?? 0) + delta);
+  }
+  return map;
+}
+
+export interface CategoryAmount {
+  category: string;
+  amount: number;
+  pct: number;
+}
+
+/** Breakdown of transactions by category (all passed transactions should be the same type), sorted descending. */
+export function getCategoryBreakdown(transactions: Transaction[]): CategoryAmount[] {
+  const map = new Map<string, number>();
+  let total = 0;
+  for (const t of transactions) {
+    map.set(t.category, (map.get(t.category) ?? 0) + t.amount);
+    total += t.amount;
+  }
+  return Array.from(map.entries())
+    .map(([category, amount]) => ({ category, amount, pct: total > 0 ? (amount / total) * 100 : 0 }))
+    .sort((a, b) => b.amount - a.amount);
 }

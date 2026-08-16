@@ -22,6 +22,7 @@ export function createDefaultState(): AppState {
     expenseCategories: DEFAULT_EXPENSE_CATEGORIES,
     incomeCategories: DEFAULT_INCOME_CATEGORIES,
     accounts: DEFAULT_ACCOUNTS,
+    accountOpeningBalances: {},
     budget: {},
   };
 }

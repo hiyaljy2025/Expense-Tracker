@@ -11,6 +11,12 @@ import type { Transaction } from './types';
 function AppShell() {
   const [tab, setTab] = useState<TabKey>('daily');
   const [editing, setEditing] = useState<Transaction | 'new' | null>(null);
+  const [dailyFocusDay, setDailyFocusDay] = useState<string | null>(null);
+
+  function goToDay(dayKey: string) {
+    setDailyFocusDay(dayKey);
+    setTab('daily');
+  }
 
   return (
     <div className="mx-auto min-h-screen max-w-md bg-gray-50 shadow-sm">
@@ -20,8 +26,15 @@ function AppShell() {
 
       <TabBar active={tab} onChange={setTab} />
 
-      {tab === 'daily' && <DailyTab onAdd={() => setEditing('new')} onEdit={(t) => setEditing(t)} />}
-      {tab === 'calendar' && <CalendarTab />}
+      {tab === 'daily' && (
+        <DailyTab
+          onAdd={() => setEditing('new')}
+          onEdit={(t) => setEditing(t)}
+          focusDay={dailyFocusDay}
+          onClearFocus={() => setDailyFocusDay(null)}
+        />
+      )}
+      {tab === 'calendar' && <CalendarTab onSelectDay={goToDay} />}
       {tab === 'weekly' && <WeeklyMonthlyTab />}
       {tab === 'total' && <TotalTab />}
 

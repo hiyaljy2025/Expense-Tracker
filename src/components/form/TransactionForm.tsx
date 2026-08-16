@@ -4,8 +4,10 @@ import { TypeToggle } from './TypeToggle';
 import { CategoryPicker } from './CategoryPicker';
 import { AccountPicker } from './AccountPicker';
 import { DateTimeField } from './DateTimeField';
+import { RecurrencePanel, RecurrenceToggleButton, type RecurrenceState } from './RecurrenceField';
 import { useTransactions } from '../../store/TransactionsContext';
 import { toDatetimeLocalValue } from '../../lib/dateUtils';
+import { generateSeries } from '../../lib/recurrence';
 import type { Transaction, TransactionType } from '../../types';
 
 interface Props {
@@ -14,8 +16,16 @@ interface Props {
 }
 
 export function TransactionForm({ editing, onClose }: Props) {
-  const { expenseCategories, incomeCategories, accounts, addTransaction, updateTransaction, removeTransaction } =
-    useTransactions();
+  const {
+    expenseCategories,
+    incomeCategories,
+    accounts,
+    addTransaction,
+    addTransactionSeries,
+    updateTransaction,
+    removeTransaction,
+    removeSeries,
+  } = useTransactions();
 
   const isNew = editing === 'new';
   const [type, setType] = useState<TransactionType>(isNew ? 'expense' : editing.type);
@@ -26,6 +36,7 @@ export function TransactionForm({ editing, onClose }: Props) {
   const [note, setNote] = useState(isNew ? '' : (editing.note ?? ''));
   const [description, setDescription] = useState(isNew ? '' : (editing.description ?? ''));
   const [picker, setPicker] = useState<'category' | 'account' | null>(null);
+  const [recurrence, setRecurrence] = useState<RecurrenceState>({ enabled: false, frequency: 'monthly', occurrences: 3 });
 
   const categories = type === 'expense' ? expenseCategories : incomeCategories;
   const canSave = amount.trim() !== '' && !Number.isNaN(Number(amount)) && Number(amount) > 0 && category !== '' && account !== '';
@@ -42,15 +53,34 @@ export function TransactionForm({ editing, onClose }: Props) {
       description: description || undefined,
     };
     if (isNew) {
-      addTransaction(payload);
+      if (recurrence.enabled) {
+        addTransactionSeries(generateSeries(payload, recurrence.frequency, recurrence.occurrences));
+      } else {
+        addTransaction(payload);
+      }
     } else {
-      updateTransaction({ ...payload, id: editing.id });
+      updateTransaction({ ...payload, id: editing.id, seriesId: editing.seriesId });
     }
     onClose();
   }
 
   function handleDelete() {
-    if (!isNew) removeTransaction(editing.id);
+    if (isNew) return;
+    if (editing.seriesId) {
+      const deleteAll = window.confirm(
+        'This transaction is part of a repeating series.\n\nOK = delete this and all other occurrences in the series\nCancel = delete only this one',
+      );
+      if (deleteAll) {
+        removeSeries(editing.seriesId);
+      } else if (window.confirm('Delete this transaction?')) {
+        removeTransaction(editing.id);
+      } else {
+        return;
+      }
+    } else {
+      if (!window.confirm('Delete this transaction? This cannot be undone.')) return;
+      removeTransaction(editing.id);
+    }
     onClose();
   }
 
@@ -63,11 +93,19 @@ export function TransactionForm({ editing, onClose }: Props) {
           Cancel
         </button>
         <h2 className="text-sm font-semibold text-gray-800">{isNew ? 'Add Transaction' : 'Edit Transaction'}</h2>
-        {isNew ? <span className="w-12" /> : (
-          <button onClick={handleDelete} className="text-sm text-expense">
-            Delete
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {isNew && (
+            <RecurrenceToggleButton
+              active={recurrence.enabled}
+              onClick={() => setRecurrence((r) => ({ ...r, enabled: !r.enabled }))}
+            />
+          )}
+          {!isNew && (
+            <button onClick={handleDelete} className="text-sm text-expense">
+              Delete
+            </button>
+          )}
+        </div>
       </div>
 
       <TypeToggle
@@ -132,6 +170,8 @@ export function TransactionForm({ editing, onClose }: Props) {
           />
         </Field>
 
+        {isNew && <RecurrencePanel value={recurrence} onChange={setRecurrence} />}
+
         <button
           onClick={handleSave}
           disabled={!canSave}
@@ -143,6 +183,7 @@ export function TransactionForm({ editing, onClose }: Props) {
 
       {picker === 'category' && (
         <CategoryPicker
+          kind={type}
           categories={categories}
           onSelect={(c) => {
             setCategory(c);

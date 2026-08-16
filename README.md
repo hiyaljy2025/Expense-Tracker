@@ -2,6 +2,19 @@
 
 A personal income/expense tracker: a Daily transaction log, a Calendar view, a Weekly/Monthly rollup, and a Total (monthly summary) tab with Excel export. Built with React, TypeScript, Vite, and Tailwind CSS. All data is stored locally in the browser (`localStorage`) — there is no backend.
 
+## Features
+
+- **Daily / Calendar / Weekly-Monthly / Total** tabs, matching the reference app layout
+- Tap a calendar day to jump straight to that day's transactions; today is highlighted
+- **Editable categories and accounts** — add, rename, or delete from the Total tab's "Manage" screen, or inline while adding a transaction
+- **Recurring transactions** ("Rep/Inst." toggle) — weekly or monthly, for a set number of occurrences
+- **Account balances** — each account tracks an opening balance plus its running income/expense ledger
+- **Budget Setting** with a progress bar against the current month's spending
+- **Spending by Category** chart on the Total tab
+- **Excel export** (`.xlsx`) and **JSON backup/restore** for full data portability
+- Installable as a **PWA** (works offline, add-to-home-screen) once deployed
+- Delete confirmations everywhere, including a choice to delete a single occurrence or a whole recurring series
+
 ## Local development
 
 ```bash

@@ -1,5 +1,7 @@
 export type TransactionType = 'income' | 'expense';
 
+export type RecurrenceFrequency = 'weekly' | 'monthly';
+
 export interface Transaction {
   id: string;
   type: TransactionType;
@@ -9,6 +11,8 @@ export interface Transaction {
   account: string;
   note?: string;
   description?: string;
+  /** Present when this transaction was generated as part of a recurring series. */
+  seriesId?: string;
 }
 
 export interface Budget {
@@ -21,5 +25,7 @@ export interface AppState {
   expenseCategories: string[];
   incomeCategories: string[];
   accounts: string[];
+  /** Opening balance per account, used as the base for running balance calculations. */
+  accountOpeningBalances: Record<string, number>;
   budget: Budget;
 }
