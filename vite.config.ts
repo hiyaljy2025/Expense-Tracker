@@ -5,7 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/expense-tracker/',
+  base: '/Expense-Tracker/',
   plugins: [
     react(),
     tailwindcss(),
@@ -19,8 +19,8 @@ export default defineConfig({
         theme_color: '#ef4444',
         background_color: '#f8f9fb',
         display: 'standalone',
-        start_url: '/expense-tracker/',
-        scope: '/expense-tracker/',
+        start_url: '/Expense-Tracker/',
+        scope: '/Expense-Tracker/',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
