@@ -49,7 +49,7 @@ export function TransactionForm({ editing, onClose, kind = 'transaction' }: Prop
   const [recurrence, setRecurrence] = useState<RecurrenceState>({ enabled: false, frequency: 'monthly', occurrences: 3 });
 
   const categories = type === 'expense' ? expenseCategories : incomeCategories;
-  const canSave = amount.trim() !== '' && !Number.isNaN(Number(amount)) && Number(amount) > 0 && category !== '' && account !== '';
+  const canSave = amount.trim() !== '' && !Number.isNaN(Number(amount)) && Number(amount) >= 0 && category !== '' && account !== '';
 
   function handleSave() {
     if (!canSave) return;

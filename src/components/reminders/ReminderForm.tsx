@@ -36,7 +36,7 @@ export function ReminderForm({ editing, onClose }: Props) {
     name.trim() !== '' &&
     amount.trim() !== '' &&
     !Number.isNaN(Number(amount)) &&
-    Number(amount) > 0 &&
+    Number(amount) >= 0 &&
     category !== '' &&
     account !== '' &&
     dueDate !== '';
