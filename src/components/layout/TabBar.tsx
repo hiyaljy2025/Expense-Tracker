@@ -1,4 +1,4 @@
-export type TabKey = 'daily' | 'calendar' | 'weekly' | 'total' | 'reminders';
+export type TabKey = 'daily' | 'calendar' | 'weekly' | 'total' | 'reminders' | 'forecast';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'daily', label: 'Daily' },
@@ -6,6 +6,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'weekly', label: 'Weekly/Monthly' },
   { key: 'total', label: 'Total' },
   { key: 'reminders', label: 'Reminders' },
+  { key: 'forecast', label: 'Forecast' },
 ];
 
 export function TabBar({ active, onChange }: { active: TabKey; onChange: (tab: TabKey) => void }) {

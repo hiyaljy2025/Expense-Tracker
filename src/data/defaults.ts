@@ -25,5 +25,6 @@ export function createDefaultState(): AppState {
     accountOpeningBalances: {},
     budget: {},
     reminders: [],
+    forecastEntries: [],
   };
 }

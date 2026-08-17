@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react';
 import type { BillReminder } from '../../types';
-import { daysUntil, formatFullDate } from '../../lib/dateUtils';
+import { daysUntil, formatFullDate, parseDateInputValue } from '../../lib/dateUtils';
 import { getReminderStatus } from '../../lib/reminders';
 
 const STATUS_STYLES = {
@@ -25,7 +25,7 @@ export function ReminderRow({
   onEdit: () => void;
   onMarkPaid: () => void;
 }) {
-  const daysLeft = daysUntil(new Date(reminder.dueDate));
+  const daysLeft = daysUntil(parseDateInputValue(reminder.dueDate));
   const status = getReminderStatus(daysLeft);
 
   return (
@@ -45,7 +45,7 @@ export function ReminderRow({
         </div>
       </button>
       <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
-        <span>Due {formatFullDate(new Date(reminder.dueDate))}</span>
+        <span>Due {formatFullDate(parseDateInputValue(reminder.dueDate))}</span>
         <button
           onClick={onMarkPaid}
           className="flex items-center gap-1 rounded-full bg-income px-3 py-1 text-xs font-medium text-white hover:bg-teal-700"

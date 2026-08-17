@@ -1,5 +1,6 @@
 import type { Transaction } from '../../types';
-import { formatDayHeader } from '../../lib/dateUtils';
+import { formatFullDate } from '../../lib/dateUtils';
+import { CollapsibleSection } from '../common/CollapsibleSection';
 import { AmountText } from './AmountText';
 
 export function TopTransactionsCard({
@@ -12,8 +13,7 @@ export function TopTransactionsCard({
   onSelect: (t: Transaction) => void;
 }) {
   return (
-    <div className="mt-2 bg-white px-4 py-3">
-      <h3 className="mb-2 text-sm font-semibold text-gray-700">{title}</h3>
+    <CollapsibleSection title={title}>
       {transactions.length === 0 ? (
         <div className="py-4 text-center text-sm text-gray-400">Nothing this month.</div>
       ) : (
@@ -28,7 +28,7 @@ export function TopTransactionsCard({
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium text-gray-800">{t.category}</div>
                 <div className="truncate text-xs text-gray-400">
-                  {formatDayHeader(new Date(t.date))} · {t.account}
+                  {formatFullDate(new Date(t.date))} · {t.account}
                   {t.note ? ` · ${t.note}` : ''}
                 </div>
               </div>
@@ -37,6 +37,6 @@ export function TopTransactionsCard({
           ))}
         </div>
       )}
-    </div>
+    </CollapsibleSection>
   );
 }

@@ -11,6 +11,7 @@ import {
 } from '../lib/aggregate';
 import { formatMonthYear, getMonthRange } from '../lib/dateUtils';
 import { SummaryRow } from '../components/common/SummaryRow';
+import { CollapsibleSection } from '../components/common/CollapsibleSection';
 import { exportToExcel } from '../lib/excelExport';
 import { CategoryBreakdownChart } from '../components/charts/CategoryBreakdownChart';
 import { ManageDataModal } from '../components/settings/ManageDataModal';
@@ -38,24 +39,33 @@ export function TotalTab({ onEditTransaction }: { onEditTransaction: (t: Transac
   const topExpenses = useMemo(() => getTopTransactions(monthExpenseTx, 10), [monthExpenseTx]);
   const topIncome = useMemo(() => getTopTransactions(monthIncomeTx, 10), [monthIncomeTx]);
 
-  const compareLastMonth = useMemo(() => {
+  const lastMonthExpense = useMemo(() => {
     const prevMonth = month === 0 ? 11 : month - 1;
     const prevYear = month === 0 ? year - 1 : year;
-    const prev = sumByType(inRange(transactions, getMonthRange(prevYear, prevMonth).start, getMonthRange(prevYear, prevMonth).end));
-    if (prev.expense === 0) return null;
-    return ((monthSummary.expense - prev.expense) / prev.expense) * 100;
-  }, [transactions, year, month, monthSummary]);
+    const { start, end } = getMonthRange(prevYear, prevMonth);
+    return sumByType(inRange(transactions, start, end)).expense;
+  }, [transactions, year, month]);
+
+  /** Remaining headroom before this month's expense catches up to last month's, as an amount and a % of last month's expense. */
+  const remainingVsLastMonth = useMemo(() => {
+    if (lastMonthExpense === 0) return null;
+    const remaining = lastMonthExpense - monthSummary.expense;
+    return { remaining, pct: (remaining / lastMonthExpense) * 100 };
+  }, [monthSummary, lastMonthExpense]);
 
   const balances = useMemo(
     () => getAccountBalances(transactions, accounts, accountOpeningBalances),
     [transactions, accounts, accountOpeningBalances],
   );
 
-  const budgetPct = budget.monthly ? Math.min((monthSummary.expense / budget.monthly) * 100, 999) : null;
+  const budgetPct = budget.monthly !== undefined ? Math.min((monthSummary.expense / budget.monthly) * 100, 999) : null;
   const overBudget = budget.monthly !== undefined && monthSummary.expense > budget.monthly;
 
   function handleBudgetSetting() {
-    const input = window.prompt('Set monthly budget amount ($):', budget.monthly ? String(budget.monthly) : '');
+    const input = window.prompt(
+      'Set monthly budget amount ($):',
+      budget.monthly !== undefined ? String(budget.monthly) : '',
+    );
     if (input === null) return;
     const value = Number(input);
     setBudget(Number.isFinite(value) && value > 0 ? value : undefined);
@@ -79,17 +89,31 @@ export function TotalTab({ onEditTransaction }: { onEditTransaction: (t: Transac
       </div>
 
       <div className="border-b border-gray-100 bg-white px-4 py-3">
-        <SummaryRow totals={monthSummary} />
+        <SummaryRow totals={monthSummary} showLabels />
       </div>
 
-      <div className="mt-2 bg-white px-4 py-3">
+      <CollapsibleSection title="Accounts">
+        <div className="mb-2 text-[11px] text-gray-400">
+          Opening Balance + Net Actual (Actual Income − Actual Expense). No forecast entries involved.
+        </div>
+        <div className="rounded-lg border border-gray-100 p-3 text-sm">
+          {accounts.map((a) => (
+            <div key={a} className="flex justify-between py-1">
+              <span className="text-gray-500">{a} balance</span>
+              <span className="font-medium text-gray-700">${(balances.get(a) ?? 0).toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Monthly Budget">
         <button onClick={handleBudgetSetting} className="flex w-full items-center justify-between text-sm">
-          <span className="text-gray-700">Budget Setting</span>
+          <span className="text-gray-700">Amount</span>
           <span className="text-gray-400">
-            {budget.monthly ? `$${budget.monthly.toFixed(2)} ›` : 'Not set ›'}
+            {budget.monthly !== undefined ? `$${budget.monthly.toFixed(2)} ›` : 'Not set ›'}
           </span>
         </button>
-        {budget.monthly && budgetPct !== null && (
+        {budget.monthly !== undefined && budgetPct !== null && (
           <div className="mt-2">
             <div className="h-1.5 w-full rounded-full bg-gray-100">
               <div
@@ -103,33 +127,50 @@ export function TotalTab({ onEditTransaction }: { onEditTransaction: (t: Transac
             </div>
           </div>
         )}
-      </div>
+      </CollapsibleSection>
 
-      <div className="mt-2 bg-white px-4 py-3">
-        <h3 className="mb-2 text-sm font-semibold text-gray-700">Spending by Category</h3>
+      <CollapsibleSection title="Compared Expenses">
+        <div className="rounded-lg border border-gray-100 p-3 text-sm">
+          <div className="flex justify-between py-1">
+            <span className="text-gray-500">Last Month Expense</span>
+            <span className="font-medium text-gray-700">${lastMonthExpense.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between py-1">
+            <span className="text-gray-500">This Month Expense</span>
+            <span className="flex items-center gap-1.5">
+              {remainingVsLastMonth !== null && remainingVsLastMonth.remaining < 0 && (
+                <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-expense">
+                  Overspent
+                </span>
+              )}
+              <span className="font-medium text-expense">${monthSummary.expense.toFixed(2)}</span>
+            </span>
+          </div>
+          <div className="flex justify-between py-1">
+            <span className="text-gray-500">Hitting Last Month Expense</span>
+            <span
+              className={`font-medium ${
+                remainingVsLastMonth === null
+                  ? 'text-gray-700'
+                  : remainingVsLastMonth.remaining < 0
+                    ? 'text-expense'
+                    : 'text-income'
+              }`}
+            >
+              {remainingVsLastMonth === null
+                ? '—'
+                : `${remainingVsLastMonth.remaining < 0 ? '-$' : '$'}${Math.abs(remainingVsLastMonth.remaining).toFixed(2)} (${remainingVsLastMonth.pct.toFixed(0)}%)`}
+            </span>
+          </div>
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Spending by Category">
         <CategoryBreakdownChart data={categoryBreakdown} />
-      </div>
+      </CollapsibleSection>
 
       <TopTransactionsCard title="Top 10 Expenses" transactions={topExpenses} onSelect={onEditTransaction} />
       <TopTransactionsCard title="Top 10 Income" transactions={topIncome} onSelect={onEditTransaction} />
-
-      <div className="mt-2 bg-white px-4 py-3">
-        <h3 className="mb-2 text-sm font-semibold text-gray-700">Accounts</h3>
-        <div className="rounded-lg border border-gray-100 p-3 text-sm">
-          <div className="flex justify-between py-1">
-            <span className="text-gray-500">Compared Expenses (Last month)</span>
-            <span className="font-medium text-gray-700">
-              {compareLastMonth === null ? '—' : `${compareLastMonth > 0 ? '+' : ''}${compareLastMonth.toFixed(0)}%`}
-            </span>
-          </div>
-          {accounts.map((a) => (
-            <div key={a} className="flex justify-between py-1">
-              <span className="text-gray-500">{a} balance</span>
-              <span className="font-medium text-gray-700">${(balances.get(a) ?? 0).toFixed(2)}</span>
-            </div>
-          ))}
-        </div>
-      </div>
 
       <div className="mt-2 flex flex-col gap-2 bg-white px-4 py-3">
         <button

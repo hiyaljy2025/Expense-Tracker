@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useReducer, type ReactNode } from
 import type { AppState, BillReminder, Transaction } from '../types';
 import { loadState, saveState } from '../lib/storage';
 import { createId } from '../lib/id';
-import { dayKey } from '../lib/dateUtils';
+import { dayKey, parseDateInputValue } from '../lib/dateUtils';
 import { advanceDueDate } from '../lib/reminders';
 
 type CategoryKind = 'expense' | 'income';
@@ -13,7 +13,13 @@ type Action =
   | { kind: 'update'; transaction: Transaction }
   | { kind: 'remove'; id: string }
   | { kind: 'removeSeries'; seriesId: string }
+  | { kind: 'addForecastEntry'; entry: Omit<Transaction, 'id'> }
+  | { kind: 'addForecastMany'; entries: Transaction[] }
+  | { kind: 'updateForecastEntry'; entry: Transaction }
+  | { kind: 'removeForecastEntry'; id: string }
+  | { kind: 'removeForecastSeries'; seriesId: string }
   | { kind: 'setBudget'; monthly: number | undefined }
+  | { kind: 'setYearlyBudget'; yearly: number | undefined }
   | { kind: 'addCategory'; categoryKind: CategoryKind; name: string }
   | { kind: 'renameCategory'; categoryKind: CategoryKind; oldName: string; newName: string }
   | { kind: 'removeCategory'; categoryKind: CategoryKind; name: string }
@@ -49,8 +55,26 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, transactions: state.transactions.filter((t) => t.id !== action.id) };
     case 'removeSeries':
       return { ...state, transactions: state.transactions.filter((t) => t.seriesId !== action.seriesId) };
+    case 'addForecastEntry':
+      return {
+        ...state,
+        forecastEntries: [...state.forecastEntries, { ...action.entry, id: createId() }],
+      };
+    case 'addForecastMany':
+      return { ...state, forecastEntries: [...state.forecastEntries, ...action.entries] };
+    case 'updateForecastEntry':
+      return {
+        ...state,
+        forecastEntries: state.forecastEntries.map((t) => (t.id === action.entry.id ? action.entry : t)),
+      };
+    case 'removeForecastEntry':
+      return { ...state, forecastEntries: state.forecastEntries.filter((t) => t.id !== action.id) };
+    case 'removeForecastSeries':
+      return { ...state, forecastEntries: state.forecastEntries.filter((t) => t.seriesId !== action.seriesId) };
     case 'setBudget':
-      return { ...state, budget: { monthly: action.monthly } };
+      return { ...state, budget: { ...state.budget, monthly: action.monthly } };
+    case 'setYearlyBudget':
+      return { ...state, budget: { ...state.budget, yearly: action.yearly } };
     case 'addCategory': {
       const key = action.categoryKind === 'expense' ? 'expenseCategories' : 'incomeCategories';
       if (state[key].includes(action.name)) return state;
@@ -62,6 +86,9 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         [key]: renameInList(state[key], action.oldName, action.newName),
         transactions: state.transactions.map((t) =>
+          t.category === action.oldName ? { ...t, category: action.newName } : t,
+        ),
+        forecastEntries: state.forecastEntries.map((t) =>
           t.category === action.oldName ? { ...t, category: action.newName } : t,
         ),
       };
@@ -85,6 +112,9 @@ function reducer(state: AppState, action: Action): AppState {
         accounts: renameInList(state.accounts, action.oldName, action.newName),
         accountOpeningBalances: { ...restBalances, [action.newName]: oldBalance ?? 0 },
         transactions: state.transactions.map((t) =>
+          t.account === action.oldName ? { ...t, account: action.newName } : t,
+        ),
+        forecastEntries: state.forecastEntries.map((t) =>
           t.account === action.oldName ? { ...t, account: action.newName } : t,
         ),
       };
@@ -130,7 +160,7 @@ function reducer(state: AppState, action: Action): AppState {
           reminders: state.reminders.filter((r) => r.id !== action.id),
         };
       }
-      const nextDueDate = dayKey(advanceDueDate(new Date(reminder.dueDate), reminder.frequency));
+      const nextDueDate = dayKey(advanceDueDate(parseDateInputValue(reminder.dueDate), reminder.frequency));
       return {
         ...state,
         transactions: [...state.transactions, paidTransaction],
@@ -150,7 +180,13 @@ interface TransactionsContextValue extends AppState {
   updateTransaction: (transaction: Transaction) => void;
   removeTransaction: (id: string) => void;
   removeSeries: (seriesId: string) => void;
+  addForecastEntry: (entry: Omit<Transaction, 'id'>) => void;
+  addForecastSeries: (entries: Transaction[]) => void;
+  updateForecastEntry: (entry: Transaction) => void;
+  removeForecastEntry: (id: string) => void;
+  removeForecastSeries: (seriesId: string) => void;
   setBudget: (monthly: number | undefined) => void;
+  setYearlyBudget: (yearly: number | undefined) => void;
   addCategory: (kind: CategoryKind, name: string) => void;
   renameCategory: (kind: CategoryKind, oldName: string, newName: string) => void;
   removeCategory: (kind: CategoryKind, name: string) => void;
@@ -181,7 +217,13 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     updateTransaction: (transaction) => dispatch({ kind: 'update', transaction }),
     removeTransaction: (id) => dispatch({ kind: 'remove', id }),
     removeSeries: (seriesId) => dispatch({ kind: 'removeSeries', seriesId }),
+    addForecastEntry: (entry) => dispatch({ kind: 'addForecastEntry', entry }),
+    addForecastSeries: (entries) => dispatch({ kind: 'addForecastMany', entries }),
+    updateForecastEntry: (entry) => dispatch({ kind: 'updateForecastEntry', entry }),
+    removeForecastEntry: (id) => dispatch({ kind: 'removeForecastEntry', id }),
+    removeForecastSeries: (seriesId) => dispatch({ kind: 'removeForecastSeries', seriesId }),
     setBudget: (monthly) => dispatch({ kind: 'setBudget', monthly }),
+    setYearlyBudget: (yearly) => dispatch({ kind: 'setYearlyBudget', yearly }),
     addCategory: (categoryKind, name) => dispatch({ kind: 'addCategory', categoryKind, name }),
     renameCategory: (categoryKind, oldName, newName) =>
       dispatch({ kind: 'renameCategory', categoryKind, oldName, newName }),

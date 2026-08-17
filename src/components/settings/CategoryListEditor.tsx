@@ -1,8 +1,17 @@
 import { useState } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTransactions, type CategoryKind } from '../../store/TransactionsContext';
+import { CollapsibleSection } from '../common/CollapsibleSection';
 
-export function CategoryListEditor({ kind, title }: { kind: CategoryKind; title: string }) {
+export function CategoryListEditor({
+  kind,
+  title,
+  defaultCollapsed = false,
+}: {
+  kind: CategoryKind;
+  title: string;
+  defaultCollapsed?: boolean;
+}) {
   const { expenseCategories, incomeCategories, addCategory, renameCategory, removeCategory } = useTransactions();
   const categories = kind === 'expense' ? expenseCategories : incomeCategories;
   const [editingName, setEditingName] = useState<string | null>(null);
@@ -32,8 +41,13 @@ export function CategoryListEditor({ kind, title }: { kind: CategoryKind; title:
   }
 
   return (
-    <div className="mb-4">
-      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">{title}</h4>
+    <CollapsibleSection
+      title={title}
+      defaultCollapsed={defaultCollapsed}
+      className="mb-4"
+      headerClassName="mb-2"
+      titleClassName="text-xs font-semibold uppercase tracking-wide text-gray-400"
+    >
       <div className="divide-y divide-gray-100 rounded-lg border border-gray-100">
         {categories.map((c) => (
           <div key={c} className="flex items-center justify-between px-3 py-2 text-sm">
@@ -89,6 +103,6 @@ export function CategoryListEditor({ kind, title }: { kind: CategoryKind; title:
           <Plus size={14} /> Add category
         </button>
       )}
-    </div>
+    </CollapsibleSection>
   );
 }

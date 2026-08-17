@@ -1,4 +1,4 @@
-import { Repeat } from 'lucide-react';
+import { Minus, Plus, Repeat } from 'lucide-react';
 import type { RecurrenceFrequency } from '../../types';
 
 export interface RecurrenceState {
@@ -46,17 +46,30 @@ export function RecurrencePanel({
           </button>
         ))}
       </div>
-      <label className="mt-3 block">
+      <div className="mt-3">
         <span className="mb-1 block text-xs font-medium text-gray-400">Number of occurrences (including this one)</span>
-        <input
-          type="number"
-          min="2"
-          max="52"
-          value={value.occurrences}
-          onChange={(e) => onChange({ ...value, occurrences: Math.max(2, Number(e.target.value) || 2) })}
-          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-red-400"
-        />
-      </label>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onChange({ ...value, occurrences: Math.max(2, value.occurrences - 1) })}
+            aria-label="Decrease occurrences"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600 active:bg-gray-200"
+          >
+            <Minus size={22} />
+          </button>
+          <span className="flex-1 rounded-lg border border-gray-200 bg-white py-2 text-center text-lg font-semibold text-gray-700">
+            {value.occurrences}
+          </span>
+          <button
+            type="button"
+            onClick={() => onChange({ ...value, occurrences: Math.min(52, value.occurrences + 1) })}
+            aria-label="Increase occurrences"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600 active:bg-gray-200"
+          >
+            <Plus size={22} />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

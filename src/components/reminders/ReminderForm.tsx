@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Modal } from '../common/Modal';
 import { CategoryPicker } from '../form/CategoryPicker';
 import { AccountPicker } from '../form/AccountPicker';
+import { AmountField } from '../form/AmountField';
 import { useTransactions } from '../../store/TransactionsContext';
 import { toDateInputValue } from '../../lib/dateUtils';
 import type { BillFrequency, BillReminder } from '../../types';
@@ -70,9 +71,7 @@ export function ReminderForm({ editing, onClose }: Props) {
   return (
     <Modal onClose={onClose}>
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-        <button onClick={onClose} className="text-sm text-gray-500">
-          Cancel
-        </button>
+        <span className="w-12" />
         <h2 className="text-sm font-semibold text-gray-800">{isNew ? 'Add Reminder' : 'Edit Reminder'}</h2>
         {isNew ? (
           <span className="w-12" />
@@ -95,16 +94,7 @@ export function ReminderForm({ editing, onClose }: Props) {
         </Field>
 
         <Field label="Amount">
-          <input
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            className="w-full border-b border-gray-200 py-2 text-sm text-gray-700 outline-none focus:border-red-400"
-          />
+          <AmountField value={amount} onChange={setAmount} />
         </Field>
 
         <Field label="Category">
@@ -159,13 +149,21 @@ export function ReminderForm({ editing, onClose }: Props) {
           />
         </Field>
 
-        <button
-          onClick={handleSave}
-          disabled={!canSave}
-          className="mt-2 w-full rounded-lg bg-expense py-3 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-40"
-        >
-          Save
-        </button>
+        <div className="mt-2 flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-lg border border-gray-200 py-3 text-sm font-semibold text-gray-600"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!canSave}
+            className="flex-[2] rounded-lg bg-expense py-3 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-40"
+          >
+            Save
+          </button>
+        </div>
       </div>
 
       {picker === 'category' && (

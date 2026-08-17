@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
 import { useTransactions } from '../store/TransactionsContext';
-import { daysUntil } from '../lib/dateUtils';
+import { daysUntil, parseDateInputValue } from '../lib/dateUtils';
 import { getReminderStatus, type ReminderStatus } from '../lib/reminders';
 import { ReminderRow } from '../components/reminders/ReminderRow';
 import { FloatingAddButton } from '../components/layout/FloatingAddButton';
+import { CollapsibleSection } from '../components/common/CollapsibleSection';
 import type { BillReminder } from '../types';
 
 const SECTIONS: { status: ReminderStatus; title: string }[] = [
@@ -23,7 +24,7 @@ export function RemindersTab({ onAdd, onEdit }: Props) {
   const grouped = useMemo(() => {
     const map: Record<ReminderStatus, BillReminder[]> = { overdue: [], dueSoon: [], upcoming: [] };
     for (const r of reminders) {
-      map[getReminderStatus(daysUntil(new Date(r.dueDate)))].push(r);
+      map[getReminderStatus(daysUntil(parseDateInputValue(r.dueDate)))].push(r);
     }
     for (const key of Object.keys(map) as ReminderStatus[]) {
       map[key].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
@@ -51,10 +52,13 @@ export function RemindersTab({ onAdd, onEdit }: Props) {
         SECTIONS.map(
           ({ status, title }) =>
             grouped[status].length > 0 && (
-              <div key={status} className="mb-2 bg-white">
-                <div className="border-b border-gray-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  {title}
-                </div>
+              <CollapsibleSection
+                key={status}
+                title={`${title} (${grouped[status].length})`}
+                className="mb-2 bg-white"
+                headerClassName="border-b border-gray-100 px-4 py-2"
+                titleClassName="text-xs font-semibold uppercase tracking-wide text-gray-400"
+              >
                 {grouped[status].map((r) => (
                   <ReminderRow
                     key={r.id}
@@ -63,7 +67,7 @@ export function RemindersTab({ onAdd, onEdit }: Props) {
                     onMarkPaid={() => handleMarkPaid(r)}
                   />
                 ))}
-              </div>
+              </CollapsibleSection>
             ),
         )
       )}

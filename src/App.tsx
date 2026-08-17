@@ -8,12 +8,14 @@ import { CalendarTab } from './tabs/CalendarTab';
 import { WeeklyMonthlyTab } from './tabs/WeeklyMonthlyTab';
 import { TotalTab } from './tabs/TotalTab';
 import { RemindersTab } from './tabs/RemindersTab';
+import { ForecastTab } from './tabs/ForecastTab';
 import type { BillReminder, Transaction } from './types';
 
 function AppShell() {
   const [tab, setTab] = useState<TabKey>('daily');
   const [editing, setEditing] = useState<Transaction | 'new' | null>(null);
   const [editingReminder, setEditingReminder] = useState<BillReminder | 'new' | null>(null);
+  const [editingForecast, setEditingForecast] = useState<Transaction | 'new' | null>(null);
   const [dailyFocusDay, setDailyFocusDay] = useState<string | null>(null);
 
   function goToDay(dayKey: string) {
@@ -43,10 +45,20 @@ function AppShell() {
       {tab === 'reminders' && (
         <RemindersTab onAdd={() => setEditingReminder('new')} onEdit={(r) => setEditingReminder(r)} />
       )}
+      {tab === 'forecast' && (
+        <ForecastTab onAdd={() => setEditingForecast('new')} onEdit={(t) => setEditingForecast(t)} />
+      )}
 
       {editing !== null && <TransactionForm editing={editing} onClose={() => setEditing(null)} />}
       {editingReminder !== null && (
         <ReminderForm editing={editingReminder} onClose={() => setEditingReminder(null)} />
+      )}
+      {editingForecast !== null && (
+        <TransactionForm
+          editing={editingForecast}
+          onClose={() => setEditingForecast(null)}
+          kind="forecast"
+        />
       )}
     </div>
   );

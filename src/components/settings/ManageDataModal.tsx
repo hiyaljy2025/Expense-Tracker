@@ -42,7 +42,7 @@ export function ManageDataModal({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="max-h-[70vh] overflow-y-auto px-4 py-4">
-        <CategoryListEditor kind="expense" title="Expense Categories" />
+        <CategoryListEditor kind="expense" title="Expense Categories" defaultCollapsed />
         <CategoryListEditor kind="income" title="Income Categories" />
         <AccountListEditor />
 

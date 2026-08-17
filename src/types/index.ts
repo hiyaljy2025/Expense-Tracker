@@ -17,6 +17,7 @@ export interface Transaction {
 
 export interface Budget {
   monthly?: number;
+  yearly?: number;
 }
 
 export type BillFrequency = 'once' | 'weekly' | 'monthly' | 'yearly';
@@ -42,4 +43,6 @@ export interface AppState {
   accountOpeningBalances: Record<string, number>;
   budget: Budget;
   reminders: BillReminder[];
+  /** Same shape as Transaction; planned future income/expense, kept separate from real balances. */
+  forecastEntries: Transaction[];
 }

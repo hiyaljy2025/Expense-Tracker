@@ -1,4 +1,4 @@
-import type { Transaction } from '../types';
+import type { Transaction, TransactionType } from '../types';
 import { dayKey, getMonthRange, getWeeksInMonth } from './dateUtils';
 
 export interface Totals {
@@ -66,13 +66,35 @@ export function getYearSummary(transactions: Transaction[], year: number): { tot
   return { totals: sumByType(yearTx), months };
 }
 
-export function sumExpenseByAccount(transactions: Transaction[]): Map<string, number> {
+/**
+ * Yearly budget forecast totals: real transactions for the year (Daily tab) plus planned forecast
+ * entries for the year (Forecast tab), added together. Recomputed from current state on every call.
+ */
+export function getForecastYearTotals(transactions: Transaction[], forecastEntries: Transaction[], year: number): Totals {
+  const actual = sumByType(transactions.filter((t) => new Date(t.date).getFullYear() === year));
+  const forecast = sumByType(forecastEntries.filter((t) => new Date(t.date).getFullYear() === year));
+  return {
+    income: actual.income + forecast.income,
+    expense: actual.expense + forecast.expense,
+    total: actual.total + forecast.total,
+  };
+}
+
+function sumByAccountForType(transactions: Transaction[], type: TransactionType): Map<string, number> {
   const map = new Map<string, number>();
   for (const t of transactions) {
-    if (t.type !== 'expense') continue;
+    if (t.type !== type) continue;
     map.set(t.account, (map.get(t.account) ?? 0) + t.amount);
   }
   return map;
+}
+
+export function sumExpenseByAccount(transactions: Transaction[]): Map<string, number> {
+  return sumByAccountForType(transactions, 'expense');
+}
+
+export function sumIncomeByAccount(transactions: Transaction[]): Map<string, number> {
+  return sumByAccountForType(transactions, 'income');
 }
 
 /** Running ledger balance per account: opening balance + income - expense, across all transactions. */

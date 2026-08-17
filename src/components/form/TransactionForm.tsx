@@ -4,6 +4,7 @@ import { TypeToggle } from './TypeToggle';
 import { CategoryPicker } from './CategoryPicker';
 import { AccountPicker } from './AccountPicker';
 import { DateTimeField } from './DateTimeField';
+import { AmountField } from './AmountField';
 import { RecurrencePanel, RecurrenceToggleButton, type RecurrenceState } from './RecurrenceField';
 import { useTransactions } from '../../store/TransactionsContext';
 import { toDatetimeLocalValue } from '../../lib/dateUtils';
@@ -13,9 +14,11 @@ import type { Transaction, TransactionType } from '../../types';
 interface Props {
   editing: Transaction | 'new';
   onClose: () => void;
+  /** 'forecast' reuses this exact form to plan future income/expense, stored separately from real transactions. */
+  kind?: 'transaction' | 'forecast';
 }
 
-export function TransactionForm({ editing, onClose }: Props) {
+export function TransactionForm({ editing, onClose, kind = 'transaction' }: Props) {
   const {
     expenseCategories,
     incomeCategories,
@@ -25,8 +28,15 @@ export function TransactionForm({ editing, onClose }: Props) {
     updateTransaction,
     removeTransaction,
     removeSeries,
+    addForecastEntry,
+    addForecastSeries,
+    updateForecastEntry,
+    removeForecastEntry,
+    removeForecastSeries,
   } = useTransactions();
 
+  const isForecast = kind === 'forecast';
+  const entryLabel = isForecast ? 'forecast entry' : 'transaction';
   const isNew = editing === 'new';
   const [type, setType] = useState<TransactionType>(isNew ? 'expense' : editing.type);
   const [date, setDate] = useState(isNew ? toDatetimeLocalValue(new Date()) : toDatetimeLocalValue(new Date(editing.date)));
@@ -54,33 +64,36 @@ export function TransactionForm({ editing, onClose }: Props) {
     };
     if (isNew) {
       if (recurrence.enabled) {
-        addTransactionSeries(generateSeries(payload, recurrence.frequency, recurrence.occurrences));
+        const series = generateSeries(payload, recurrence.frequency, recurrence.occurrences);
+        if (isForecast) addForecastSeries(series);
+        else addTransactionSeries(series);
+      } else if (isForecast) {
+        addForecastEntry(payload);
       } else {
         addTransaction(payload);
       }
     } else {
-      updateTransaction({ ...payload, id: editing.id, seriesId: editing.seriesId });
+      const updated = { ...payload, id: editing.id, seriesId: editing.seriesId };
+      if (isForecast) updateForecastEntry(updated);
+      else updateTransaction(updated);
     }
     onClose();
   }
 
   function handleDelete() {
     if (isNew) return;
-    if (editing.seriesId) {
-      const deleteAll = window.confirm(
-        'This transaction is part of a repeating series.\n\nOK = delete this and all other occurrences in the series\nCancel = delete only this one',
-      );
-      if (deleteAll) {
-        removeSeries(editing.seriesId);
-      } else if (window.confirm('Delete this transaction?')) {
-        removeTransaction(editing.id);
-      } else {
-        return;
-      }
-    } else {
-      if (!window.confirm('Delete this transaction? This cannot be undone.')) return;
-      removeTransaction(editing.id);
-    }
+    if (!window.confirm(`Delete this ${entryLabel}? This cannot be undone.`)) return;
+    if (isForecast) removeForecastEntry(editing.id);
+    else removeTransaction(editing.id);
+    onClose();
+  }
+
+  function handleDeleteSeries() {
+    if (isNew || !editing.seriesId) return;
+    if (!window.confirm('Delete this and every other occurrence in this repeating series? This cannot be undone.'))
+      return;
+    if (isForecast) removeForecastSeries(editing.seriesId);
+    else removeSeries(editing.seriesId);
     onClose();
   }
 
@@ -89,23 +102,24 @@ export function TransactionForm({ editing, onClose }: Props) {
   return (
     <Modal onClose={onClose}>
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-        <button onClick={onClose} className="text-sm text-gray-500">
-          Cancel
-        </button>
-        <h2 className="text-sm font-semibold text-gray-800">{isNew ? 'Add Transaction' : 'Edit Transaction'}</h2>
-        <div className="flex items-center gap-1">
-          {isNew && (
-            <RecurrenceToggleButton
-              active={recurrence.enabled}
-              onClick={() => setRecurrence((r) => ({ ...r, enabled: !r.enabled }))}
-            />
-          )}
-          {!isNew && (
-            <button onClick={handleDelete} className="text-sm text-expense">
-              Delete
-            </button>
-          )}
-        </div>
+        <span className="w-12" />
+        <h2 className="text-sm font-semibold text-gray-800">
+          {isForecast
+            ? isNew
+              ? 'Add Forecast Entry'
+              : 'Edit Forecast Entry'
+            : isNew
+              ? 'Add Transaction'
+              : 'Edit Transaction'}
+        </h2>
+        {isNew ? (
+          <RecurrenceToggleButton
+            active={recurrence.enabled}
+            onClick={() => setRecurrence((r) => ({ ...r, enabled: !r.enabled }))}
+          />
+        ) : (
+          <span className="w-12" />
+        )}
       </div>
 
       <TypeToggle
@@ -122,16 +136,7 @@ export function TransactionForm({ editing, onClose }: Props) {
         </Field>
 
         <Field label="Amount">
-          <input
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            className="w-full border-b border-gray-200 py-2 text-sm text-gray-700 outline-none focus:border-red-400"
-          />
+          <AmountField value={amount} onChange={setAmount} />
         </Field>
 
         <Field label="Category">
@@ -172,13 +177,40 @@ export function TransactionForm({ editing, onClose }: Props) {
 
         {isNew && <RecurrencePanel value={recurrence} onChange={setRecurrence} />}
 
-        <button
-          onClick={handleSave}
-          disabled={!canSave}
-          className={`mt-2 w-full rounded-lg py-3 text-sm font-semibold text-white disabled:opacity-40 ${accentColor}`}
-        >
-          Done
-        </button>
+        {!isNew && (
+          <div className="mt-2 flex gap-2">
+            {editing.seriesId && (
+              <button
+                onClick={handleDeleteSeries}
+                className="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-500 active:bg-gray-100"
+              >
+                Delete recurring
+              </button>
+            )}
+            <button
+              onClick={handleDelete}
+              className="flex-1 rounded-lg border border-expense py-2.5 text-sm font-medium text-expense active:bg-red-50"
+            >
+              Delete
+            </button>
+          </div>
+        )}
+
+        <div className="mt-2 flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-lg border border-gray-200 py-3 text-sm font-semibold text-gray-600"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!canSave}
+            className={`flex-[2] rounded-lg py-3 text-sm font-semibold text-white disabled:opacity-40 ${accentColor}`}
+          >
+            {isNew ? 'Done' : 'Done (Edit)'}
+          </button>
+        </div>
       </div>
 
       {picker === 'category' && (

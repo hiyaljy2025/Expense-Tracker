@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTransactions } from '../../store/TransactionsContext';
+import { AmountField } from '../form/AmountField';
 
 export function AccountListEditor() {
   const { accounts, accountOpeningBalances, addAccount, renameAccount, removeAccount, setAccountOpeningBalance } =
     useTransactions();
   const [editingName, setEditingName] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  const [balanceDrafts, setBalanceDrafts] = useState<Record<string, string>>({});
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [newBalance, setNewBalance] = useState('0');
@@ -17,6 +19,22 @@ export function AccountListEditor() {
       renameAccount(oldName, trimmed);
     }
     setEditingName(null);
+  }
+
+  function handleBalanceChange(name: string, value: string) {
+    setBalanceDrafts((prev) => ({ ...prev, [name]: value }));
+  }
+
+  /** Commits once editing finishes (pad closed, or a stepper tap) rather than on every keystroke,
+   *  then drops the draft so the field goes back to reading straight from the committed store value
+   *  — otherwise a stale draft would keep masking it (e.g. after restoring a JSON backup). */
+  function commitBalance(name: string, value: string) {
+    setAccountOpeningBalance(name, Number(value) || 0);
+    setBalanceDrafts((prev) => {
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
   }
 
   function commitAdd() {
@@ -40,8 +58,8 @@ export function AccountListEditor() {
       <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Accounts</h4>
       <div className="divide-y divide-gray-100 rounded-lg border border-gray-100">
         {accounts.map((a) => (
-          <div key={a} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
-            <div className="flex-1">
+          <div key={a} className="px-3 py-2 text-sm">
+            <div className="flex items-center justify-between gap-2">
               {editingName === a ? (
                 <input
                   autoFocus
@@ -49,60 +67,67 @@ export function AccountListEditor() {
                   onChange={(e) => setDraft(e.target.value)}
                   onBlur={() => commitRename(a)}
                   onKeyDown={(e) => e.key === 'Enter' && commitRename(a)}
-                  className="w-full rounded border border-gray-200 px-2 py-1 text-sm outline-none focus:border-red-400"
+                  className="flex-1 rounded border border-gray-200 px-2 py-1 text-sm outline-none focus:border-red-400"
                 />
               ) : (
-                <span className="text-gray-700">{a}</span>
+                <span className="flex-1 text-gray-700">{a}</span>
               )}
-              <div className="mt-1 flex items-center gap-1 text-xs text-gray-400">
-                Opening balance:
-                <input
-                  type="number"
-                  step="0.01"
-                  defaultValue={accountOpeningBalances[a] ?? 0}
-                  onBlur={(e) => setAccountOpeningBalance(a, Number(e.target.value) || 0)}
-                  className="w-20 rounded border border-gray-200 px-1 py-0.5 text-xs outline-none focus:border-red-400"
-                />
+              <div className="flex shrink-0 gap-2 text-gray-400">
+                <button
+                  onClick={() => {
+                    setEditingName(a);
+                    setDraft(a);
+                  }}
+                  aria-label={`Rename ${a}`}
+                >
+                  <Pencil size={14} />
+                </button>
+                <button onClick={() => handleDelete(a)} aria-label={`Delete ${a}`}>
+                  <Trash2 size={14} />
+                </button>
               </div>
             </div>
-            <div className="flex gap-2 text-gray-400">
-              <button
-                onClick={() => {
-                  setEditingName(a);
-                  setDraft(a);
-                }}
-                aria-label={`Rename ${a}`}
-              >
-                <Pencil size={14} />
-              </button>
-              <button onClick={() => handleDelete(a)} aria-label={`Delete ${a}`}>
-                <Trash2 size={14} />
-              </button>
+            <div className="mt-2">
+              <span className="mb-1 block text-xs text-gray-400">Opening balance</span>
+              <AmountField
+                value={balanceDrafts[a] ?? String(accountOpeningBalances[a] ?? 0)}
+                onChange={(v) => handleBalanceChange(a, v)}
+                onCommit={(v) => commitBalance(a, v)}
+                allowNegative
+              />
             </div>
           </div>
         ))}
       </div>
 
       {adding ? (
-        <div className="mt-2 flex gap-2">
+        <div className="mt-2 rounded-lg border border-gray-200 p-3">
           <input
             autoFocus
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="New account"
-            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-red-400"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-red-400"
           />
-          <input
-            type="number"
-            step="0.01"
-            value={newBalance}
-            onChange={(e) => setNewBalance(e.target.value)}
-            placeholder="Opening $"
-            className="w-24 rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-red-400"
-          />
-          <button onClick={commitAdd} className="rounded-lg bg-red-500 px-3 py-2 text-sm font-medium text-white">
-            Add
-          </button>
+          <div className="mt-2">
+            <span className="mb-1 block text-xs text-gray-400">Opening balance</span>
+            <AmountField value={newBalance} onChange={setNewBalance} allowNegative />
+          </div>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={() => {
+                setAdding(false);
+                setNewName('');
+                setNewBalance('0');
+              }}
+              className="flex-1 rounded-lg border border-gray-200 py-2 text-sm font-medium text-gray-600"
+            >
+              Cancel
+            </button>
+            <button onClick={commitAdd} className="flex-1 rounded-lg bg-red-500 py-2 text-sm font-medium text-white">
+              Add
+            </button>
+          </div>
         </div>
       ) : (
         <button
