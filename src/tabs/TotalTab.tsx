@@ -97,12 +97,18 @@ export function TotalTab({ onEditTransaction }: { onEditTransaction: (t: Transac
           Opening Balance + Net Actual (Actual Income − Actual Expense). No forecast entries involved.
         </div>
         <div className="rounded-lg border border-gray-100 p-3 text-sm">
-          {accounts.map((a) => (
-            <div key={a} className="flex justify-between py-1">
-              <span className="text-gray-500">{a} balance</span>
-              <span className="font-medium text-gray-700">${(balances.get(a) ?? 0).toFixed(2)}</span>
-            </div>
-          ))}
+          {accounts.map((a) => {
+            const balance = balances.get(a) ?? 0;
+            return (
+              <div key={a} className="flex justify-between py-1">
+                <span className="text-gray-500">{a} balance</span>
+                <span className="font-medium text-gray-700">
+                  {balance < 0 ? '-$' : '$'}
+                  {Math.abs(balance).toFixed(2)}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </CollapsibleSection>
 
