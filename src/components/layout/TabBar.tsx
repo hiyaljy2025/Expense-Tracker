@@ -4,7 +4,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'daily', label: 'Daily' },
   { key: 'calendar', label: 'Calendar' },
   { key: 'weekly', label: 'Weekly/Monthly' },
-  { key: 'total', label: 'Total' },
+  { key: 'total', label: 'Statistics' },
   { key: 'reminders', label: 'Reminders' },
   { key: 'forecast', label: 'Forecast' },
 ];
